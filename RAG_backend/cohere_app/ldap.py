@@ -66,7 +66,7 @@ def auth_main(username, password):
         print("Username must end with @ltdic.com or @ltsb.com")
         return False
 
-    server = Server(LDAP_URI, get_info=ALL)
+    # server = Server(LDAP_URI, get_info=ALL)
     try:
         # # auto_bind=True will open & bind in one step
         # with Connection(server, user=username, password=password, auto_bind=True) as conn:

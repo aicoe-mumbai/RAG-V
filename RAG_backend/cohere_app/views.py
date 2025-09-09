@@ -13,7 +13,6 @@ from django.contrib.auth import authenticate
 from django.utils import timezone
 from django.db import connection
 from django.db.models import Min
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -50,8 +49,8 @@ def load_user_list(file_path, column_name='USERNAMES'):
         print(f"Error loading {file_path}: {e}")
         return []
 
-QA_USERS = load_user_list(r'D:\AICOE\RAG_VIZAG\usernames.xlsx')
-ADMIN_USERS = load_user_list(r'D:\AICOE\RAG_VIZAG\admin.xlsx')
+QA_USERS = load_user_list('/home/ubuntu/Desktop/RAG-V/admin.xlsx')
+ADMIN_USERS = load_user_list('/home/ubuntu/Desktop/RAG-V/admin.xlsx')
 
 def extract_base_username(username):
     if '@' in username:
@@ -93,12 +92,12 @@ def login_user(request):
         session.usecase = 'chat'
 
         # Assign QA usecase if base username in QA_USERS
-        # if base_username in QA_USERS:
-        #     session.usecase = 'qa'
+        if base_username in QA_USERS:
+            session.usecase = 'qa'
 
-        # # Assign Admin role if base username in ADMIN_USERS
-        # if base_username in ADMIN_USERS:
-        #     session.role = 'admin'
+        # Assign Admin role if base username in ADMIN_USERS
+        if base_username in ADMIN_USERS:
+            session.role = 'admin'
 
         session.save()
 

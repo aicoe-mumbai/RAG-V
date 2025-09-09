@@ -22,7 +22,7 @@ function Landing({ username }) {
     } else if (mode === 'chat')  {
       const authToken = sessionStorage.getItem('authToken');
       const userName = sessionStorage.getItem('userName');
-      const url = `http://172.16.34.231:8443/?authToken=${encodeURIComponent(authToken)}&userName=${encodeURIComponent(userName)}`;
+      const url = `http://localhost:8443/?authToken=${encodeURIComponent(authToken)}&userName=${encodeURIComponent(userName)}`;
       window.location.href = url;
     }
   };

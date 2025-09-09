@@ -11,30 +11,30 @@ import re, os
 from dotenv import load_dotenv
 from langchain_community.vectorstores import FAISS
 from langchain_community.document_loaders import PyPDFLoader
-from langchain_huggingface import HuggingFaceEmbeddings
+# from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 from .Chunking_UI.file_process_new import create_faiss_index
 from langchain.embeddings import SentenceTransformerEmbeddings
 # from guardrails import Guard
 # from guardrails.hub import ToxicLanguage
 # from guardrails.types import OnFailAction
-load_dotenv()
-import torch
 from threading import Thread
 import requests
 import json
 
+load_dotenv()
 host = os.getenv("HOST")
 port = os.getenv("PORT")
 
-# embedding_model = SentenceTransformer("D:\AICOE\RAG_VIZAG\RAG_backend\cohere_app\embedding_model")
-embedding_model = HuggingFaceEmbeddings(model_name='D:\AICOE\RAG_VIZAG\RAG_backend\cohere_app\embedding_model', model_kwargs={'device': "cpu"})
+embedding_model = SentenceTransformer("/home/ubuntu/Desktop/RAG-V/RAG_backend/cohere_app/embedding_model")
+# embedding_model = HuggingFaceEmbeddings(model_name='D:\AICOE\RAG_VIZAG\RAG_backend\cohere_app\embedding_model', model_kwargs={'device': "cpu"})
 
 embeddings = SentenceTransformerEmbeddings(
-    model_name="D:\AICOE\RAG_VIZAG\RAG_backend\cohere_app\embedding_model"
+    model_name="/home/ubuntu/Desktop/RAG-V/RAG_backend/cohere_app/models/sentence_transformer"
 )
 
-url = "http://172.16.34.235:8080/v1/chat/completions"
+#url = "http://172.16.34.235:8080/v1/chat/completions"
+url = "http://10.80.3.108:11434/api/generate"
 headers = {
     "Content-Type": "application/json"
 }
@@ -88,9 +88,7 @@ def contains_forbidden_regex(user_input):
     return False
 
 def contains_forbidden_terms(user_input, threshold=0.7):
-    # Generate the embedding for the user's query
     user_input_embedding = embedding_model.encode([user_input])
-    # Compute cosine similarity between the user's query and forbidden terms embeddings
     similarities = cosine_similarity(user_input_embedding, forbidden_embeddings)
     max_similarity = np.max(similarities)
     return max_similarity >= threshold
@@ -118,7 +116,9 @@ def get_current_using_collection_value():
     except Exception as e:
         return str(e) 
 
-collection_name = "QA"
+
+collection_name = get_current_using_collection_value()
+
 
 if collection_name:
     MILVUS_COLLECTION = collection_name
@@ -165,9 +165,9 @@ def generate_streaming_response(question, context):
         else:
             print(f"Error: {response.status_code}")
 
-# connections.connect("default", host=host, port= port)
-# collection = Collection(MILVUS_COLLECTION)
-# collection.load()
+connections.connect("default", host=host, port= port)
+collection = Collection(MILVUS_COLLECTION)
+collection.load()
 
 
 def clean_string(input_string):
@@ -180,21 +180,14 @@ search_params = {"metric_type": "L2", "params": {"ef": 30}}
 
 def process_query(user_input, mode, selected_file, system_id, batch_size=3):
     try:
-        # Check if the user input contains toxic language
-        # guard.validate(user_input)
-
-        # If the input contains positive/neutral content related to L&T, allow it
         if contains_positive_lnt_terms(user_input):
-            pass  # Allow the query to proceed without any blocking
+            pass 
         else:
-            # If it's not positive/neutral, check if it's forbidden
             if contains_forbidden_regex(user_input) or contains_forbidden_terms(user_input):
                 yield "Sorry, I cannot process your request as it contains inappropriate or sensitive content."
                 return
 
         if mode == "qa":
-            connections.connect("default", host=host, port=port)
-            # Initialize session if not already present
             if system_id not in user_sessions:
                 user_sessions[system_id] = {
                     'results': [],
@@ -203,7 +196,6 @@ def process_query(user_input, mode, selected_file, system_id, batch_size=3):
                 }
             session = user_sessions[system_id]
 
-            # Handle "continue" command to fetch next batch of results
             if user_input.lower() == "continue":
                 if not session['last_query']:
                     yield "No previous query found. Please enter a new question."
@@ -215,7 +207,6 @@ def process_query(user_input, mode, selected_file, system_id, batch_size=3):
                 session['last_query'] = user_input
                 query_vector = embedding_model.encode([user_input]).tolist()
 
-                # Optional file filtering using selected_file
                 if selected_file:
                     formatted_files = ", ".join([f"'{file}'" for file in selected_file])
                     expr = f"source in [{formatted_files}]"
@@ -232,27 +223,23 @@ def process_query(user_input, mode, selected_file, system_id, batch_size=3):
                     expr=expr
                 )
 
-                # Flatten the search results
                 all_hits = []
                 for hits in search_results:
                     all_hits.extend(hits)
                 session['results'] = all_hits
                 session['current_index'] = 0
 
-            # Retrieve the current batch of results
             start_index = session['current_index']
             end_index = start_index + batch_size
             batch_results = session['results'][start_index:end_index]
             session['current_index'] = end_index
 
-            # Build the response context from the batch results
             context = '\n---\n'.join(
                 f"File: {hit.entity.get('source')}\nPage: {hit.entity.get('page')}\nText: {hit.entity.get('text')}"
                 for hit in batch_results
             )
             current_question = session['last_query'] if user_input.lower() == "continue" else user_input
             
-            # Stream the response
             for chunk in generate_streaming_response(current_question, context):
                 yield chunk
 
@@ -309,9 +296,6 @@ Example of blocked queries:
 Make sure to verify every query before providing an answer to ensure it aligns with the above guidelines.
 
                     """
-
-
-            # Initialize session if not already present
             if system_id not in user_sessions:
                 user_sessions[system_id] = {
                     'results': [],

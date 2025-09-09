@@ -72,7 +72,7 @@ MAX_WORKERS = 4
 MAX_RETRIES = 3
 
 embeddings = HuggingFaceEmbeddings(
-    model_name='D:\AICOE\RAG_VIZAG\RAG_backend\cohere_app\models\sentence_transformer',
+    model_name='/home/ubuntu/Desktop/RAG-V/RAG_backend/cohere_app/embedding_model',
     model_kwargs={'device': "cpu"}
 )
 # embeddings = SentenceTransformer('/home/qa-prod/Desktop/RAG_PRODUCTION/RAG_backend/cohere_app/models/sentence_transformer')

@@ -2,7 +2,6 @@
 # from sentence_transformers import SentenceTransformer
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-from threading import Thread
 from sentence_transformers import SentenceTransformer
 from functools import lru_cache 
 from pymilvus import connections, Collection
@@ -27,7 +26,8 @@ port = os.getenv("PORT")
 embedding_model = SentenceTransformer('/home/qa-prod/Desktop/QA/RAG_backend/cohere_app/embedding_model')
 embeddings = HuggingFaceEmbeddings(model_name='sentence-transformers/all-MiniLM-L6-v2', model_kwargs={'device': "cpu"})
 
-url = "http://172.16.34.235:8080/v1/chat/completions"
+#url = "http://172.16.34.235:8080/v1/chat/completions"
+url = "http://10.80.3.108:11434/api/generate"
 headers = {
     "Content-Type": "application/json"
 }
@@ -353,26 +353,6 @@ def get_all_files_from_milvus():
     connections.disconnect("default")
     return database_files
 
-
-@lru_cache(maxsize=None)
-def get_all_files_from_milvus():
-    connections.connect("default", host=host, port= port)
-    collection = Collection(MILVUS_COLLECTION)
-    iterator = collection.query_iterator(batch_size=1000,output_fields=["source"])
-    results=[]
-    while True:
-        result = iterator.next()
-        if not result:
-            iterator.close()
-            break
-        results.extend(result)
-    
-    database_files = []
-    for result in results:
-        database_files.append(result['source'])
-    database_files = list(set(database_files))
-    connections.disconnect("default")
-    return database_files
 
 
 def chat_with_uploaded_document(faiss_folder, query, top_k = 3):
